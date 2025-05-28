@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NFC Check-In</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2em;
+    }
+    .status {
+      margin-top: 2em;
+      font-size: 1.2em;
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>NFC Check-In</h1>
+  <p>Tap a badge to check in.</p>
+  <div class="status" id="status">Ready to scan...</div>
+
+  <script>
+    const webhookURL = "12G0dIGgl8ldHe0cMWP_TX3vbF_cnob5-VkG_w0j_WKA"; // Replace with your URL
+    const sessionName = "Session A"; // Customize per session/device
+
+    const statusDiv = document.getElementById('status');
+
+    async function startScan() {
+      if (!("NDEFReader" in window)) {
+        statusDiv.textContent = "Web NFC not supported in this browser.";
+        statusDiv.classList.add("error");
+        return;
+      }
+
+      try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        statusDiv.textContent = "Scanning for NFC tags...";
+
+        ndef.onreading = async event => {
+          const nfc_id = event.serialNumber;
+          statusDiv.textContent = `Tag detected: ${nfc_id}`;
+
+          const response = await fetch(webhookURL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              nfc_id: nfc_id,
+              session: sessionName
+            })
+          });
+
+          if (response.ok) {
+            statusDiv.textContent = `Check-in successful for ${nfc_id}`;
+          } else {
+            statusDiv.textContent = `Failed to check in: ${response.status}`;
+            statusDiv.classList.add("error");
+          }
+        };
+      } catch (error) {
+        statusDiv.textContent = `NFC error: ${error.message}`;
+        statusDiv.classList.add("error");
+      }
+    }
+
+    startScan();
+  </script>
+</body>
+</html>
